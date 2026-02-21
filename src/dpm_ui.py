@@ -64,7 +64,7 @@ class PowerMeterApp(ctk.CTk):
         self.v_slots = self.create_lcd_quadrant(0, 0, "VOLTAGE", 5, "V", lcd_text_color, dot_idx=2)
         self.i_slots = self.create_lcd_quadrant(0, 1, "CURRENT", 5, "A", lcd_text_color, dot_idx=2)
         self.p_slots = self.create_lcd_quadrant(1, 0, "POWER", 5, "W", lcd_text_color, dot_idx=3)
-        self.max_slots = self.create_lcd_quadrant(1, 1, "MAX DRAW", 5, "MAX", lcd_text_color, dot_idx=2)
+        self.max_slots = self.create_lcd_quadrant(1, 1, "MAX CURRENT", 5, "MAX", lcd_text_color, dot_idx=2)
 
         self.update_slots(self.v_slots, "00.00")
         self.update_slots(self.i_slots, "00.00")
