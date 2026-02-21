@@ -5,24 +5,38 @@ import threading
 from collections import deque
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import os
 
 class PowerMeterApp(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("Dell Power Meter - Cross-Platform")
-        self.geometry("1000x950")
+        self.title("Dell Power Meter - 7-Segment Clone")
+        self.geometry("920x980")
         ctk.set_appearance_mode("dark")
+
+        # --- 1. FONT LOADING ---
+        self.font_name = "Arial"
+        try:
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            font_path = os.path.join(script_dir, "digital-7.ttf")
+            if os.path.exists(font_path):
+                ctk.FontManager.load_font(font_path)
+                self.font_name = "Digital-7"
+            else:
+                print(f"Font file not found at: {font_path}")
+        except Exception as e:
+            print(f"Font error: {e}")
 
         # Data & Control State
         self.history_v = deque([0.0]*50, maxlen=50)
         self.history_i = deque([0.0]*50, maxlen=50)
         self.history_p = deque([0.0]*50, maxlen=50)
+        self.max_current = 0.0
         self.ser = None
         self.running = False
-        self.is_held = False  # Hold toggle flag
+        self.is_held = False
 
-        # --- UI LAYOUT ---
-        # 1. Connection Header
+        # --- 2. UI LAYOUT ---
         self.conn_frame = ctk.CTkFrame(self)
         self.conn_frame.pack(fill="x", padx=10, pady=5)
         self.port_var = ctk.StringVar(value="Select Port")
@@ -32,63 +46,90 @@ class PowerMeterApp(ctk.CTk):
         self.refresh_btn.pack(side="left", padx=5)
         self.connect_btn = ctk.CTkButton(self.conn_frame, text="Connect", fg_color="green", command=self.toggle_connection)
         self.connect_btn.pack(side="left", padx=10)
-        self.status_dot = ctk.CTkLabel(self.conn_frame, text="●", text_color="red", font=("Arial", 20))
+        self.status_dot = ctk.CTkLabel(self.conn_frame, text="●", text_color="red", font=("Arial", 24))
         self.status_dot.pack(side="right", padx=10)
 
-        # 2. Digital Readouts
-        self.readout_frame = ctk.CTkFrame(self)
-        self.readout_frame.pack(fill="x", padx=10, pady=10)
-        self.val_v = self.create_metric(self.readout_frame, "VOLTAGE", "0.00 V", "cyan")
-        self.val_i = self.create_metric(self.readout_frame, "CURRENT", "0.00 A", "lightgreen")
-        self.val_p = self.create_metric(self.readout_frame, "POWER", "0.0 W", "orange")
+        # --- 3. RECREATED DIGITAL DISPLAY ---
+        #lcd_blue_bg = "#001e3c"
+        #lcd_text_color = "#82caff"
+        lcd_blue_bg = "#82caff"
+        lcd_text_color = "#001e3c"
+        self.display_container = ctk.CTkFrame(self, fg_color="#333", border_width=4, border_color="#555")
+        self.display_container.pack(fill="x", padx=20, pady=10)
+        self.lcd_frame = ctk.CTkFrame(self.display_container, fg_color=lcd_blue_bg, corner_radius=0)
+        self.lcd_frame.pack(fill="both", expand=True, padx=5, pady=5)
+        self.lcd_frame.grid_columnconfigure((0, 1), weight=1)
+        self.lcd_frame.grid_rowconfigure((0, 1), weight=1)
 
-        # 3. Chart Controls & Hold Button
-        self.toggle_frame = ctk.CTkFrame(self)
-        self.toggle_frame.pack(fill="x", padx=10, pady=5)
-        
+        self.v_slots = self.create_lcd_quadrant(0, 0, "VOLTAGE", 5, "V", lcd_text_color, dot_idx=2)
+        self.i_slots = self.create_lcd_quadrant(0, 1, "CURRENT", 5, "A", lcd_text_color, dot_idx=2)
+        self.p_slots = self.create_lcd_quadrant(1, 0, "POWER", 5, "W", lcd_text_color, dot_idx=3)
+        self.max_slots = self.create_lcd_quadrant(1, 1, "MAX DRAW", 5, "MAX", lcd_text_color, dot_idx=2)
+
+        self.update_slots(self.v_slots, "00.00")
+        self.update_slots(self.i_slots, "00.00")
+        self.update_slots(self.p_slots, "000.0")
+        self.update_slots(self.max_slots, "00.00")
+
+        # --- 4. CONTROLS & GRAPH ---
+        self.ctrl_frame = ctk.CTkFrame(self)
+        self.ctrl_frame.pack(fill="x", padx=10, pady=5)
         self.show_v = ctk.BooleanVar(value=False)
         self.show_i = ctk.BooleanVar(value=True)
         self.show_p = ctk.BooleanVar(value=False)
+        ctk.CTkSwitch(self.ctrl_frame, text="Show V", variable=self.show_v, progress_color="cyan").pack(side="left", padx=10)
+        ctk.CTkSwitch(self.ctrl_frame, text="Show I", variable=self.show_i, progress_color="lightgreen").pack(side="left", padx=10)
+        ctk.CTkSwitch(self.ctrl_frame, text="Show W", variable=self.show_p, progress_color="orange").pack(side="left", padx=10)
+        self.reset_btn = ctk.CTkButton(self.ctrl_frame, text="RESET MAX", fg_color="#922b21", command=self.reset_max)
+        self.reset_btn.pack(side="right", padx=10)
+        self.hold_btn = ctk.CTkButton(self.ctrl_frame, text="HOLD GRAPH", fg_color="#5d6d7e", command=self.toggle_hold)
+        self.hold_btn.pack(side="right", padx=10)
 
-        ctk.CTkSwitch(self.toggle_frame, text="Show Voltage", variable=self.show_v, progress_color="cyan").pack(side="left", padx=15)
-        ctk.CTkSwitch(self.toggle_frame, text="Show Current", variable=self.show_i, progress_color="lightgreen").pack(side="left", padx=15)
-        ctk.CTkSwitch(self.toggle_frame, text="Show Wattage", variable=self.show_p, progress_color="orange").pack(side="left", padx=15)
-
-        # NEW: Hold Button
-        self.hold_btn = ctk.CTkButton(self.toggle_frame, text="Hold Graph", fg_color="gray", command=self.toggle_hold)
-        self.hold_btn.pack(side="right", padx=20)
-
-        # 4. Graph Setup
         self.fig, self.ax = plt.subplots(figsize=(5, 3), dpi=100)
         self.fig.patch.set_facecolor('#1a1a1a')
         self.ax.set_facecolor('#1a1a1a')
-        self.line_v, = self.ax.plot(range(50), self.history_v, color='cyan', visible=False)
-        self.line_i, = self.ax.plot(range(50), self.history_i, color='lightgreen', visible=True)
-        self.line_p, = self.ax.plot(range(50), self.history_p, color='orange', visible=False)
+        self.line_v, = self.ax.plot(range(50), list(self.history_v), color='cyan', visible=False)
+        self.line_i, = self.ax.plot(range(50), list(self.history_i), color='lightgreen', visible=True)
+        self.line_p, = self.ax.plot(range(50), list(self.history_p), color='orange', visible=False)
         self.ax.tick_params(colors='white')
-        self.ax.grid(True, color='#444444')
+        self.ax.grid(True, color='#333333')
         self.canvas = FigureCanvasTkAgg(self.fig, master=self)
         self.canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=5)
+        self.raw_data_lbl = ctk.CTkLabel(self, text="Ready", font=("Courier", 12))
+        self.raw_data_lbl.pack(pady=5)
 
-        self.debug_frame = ctk.CTkFrame(self, height=80)
-        self.debug_frame.pack(fill="x", padx=10, pady=10)
-        self.raw_data_lbl = ctk.CTkLabel(self.debug_frame, text="Ready", font=("Courier", 12))
-        self.raw_data_lbl.pack(fill="x", padx=10, pady=10)
+    def create_lcd_quadrant(self, r, c, label_text, num_slots, unit_text, color, dot_idx):
+        f = ctk.CTkFrame(self.lcd_frame, fg_color="transparent")
+        f.grid(row=r, column=c, sticky="nsew", padx=20, pady=20)
+        top_row = ctk.CTkFrame(f, fg_color="transparent")
+        top_row.pack()
+        slots_container = ctk.CTkFrame(top_row, fg_color="transparent")
+        slots_container.pack(side="left")
+        labels = []
+        for i in range(num_slots):
+            is_dot = (i == dot_idx)
+            w = 0 if is_dot else 65
+            lbl = ctk.CTkLabel(slots_container, text="-", font=(self.font_name, 110), text_color=color, width=w)
+            lbl.pack(side="left")
+            labels.append(lbl)
+        u_lbl = ctk.CTkLabel(top_row, text=unit_text, font=("Arial", 30, "bold"), text_color=color)
+        u_lbl.pack(side="left", padx=10, pady=(45, 0))
+        l_lbl = ctk.CTkLabel(f, text=label_text, font=("Arial", 24, "bold"), text_color=color)
+        l_lbl.pack()
+        return labels
+
+    def update_slots(self, slots_list, value_str):
+        for i, char in enumerate(value_str):
+            if i < len(slots_list):
+                slots_list[i].configure(text=char)
+
+    def reset_max(self):
+        self.max_current = 0.0
+        self.update_slots(self.max_slots, "00.00")
 
     def toggle_hold(self):
         self.is_held = not self.is_held
-        if self.is_held:
-            self.hold_btn.configure(text="RESUME", fg_color="orange")
-        else:
-            self.hold_btn.configure(text="Hold Graph", fg_color="gray")
-
-    def create_metric(self, parent, title, placeholder, color):
-        frame = ctk.CTkFrame(parent)
-        frame.pack(side="left", expand=True, fill="both", padx=5, pady=5)
-        ctk.CTkLabel(frame, text=title, font=("Arial", 12)).pack(pady=(5,0))
-        lbl = ctk.CTkLabel(frame, text=placeholder, font=("Arial", 32, "bold"), text_color=color)
-        lbl.pack(pady=(0, 10))
-        return lbl
+        self.hold_btn.configure(text="RESUME" if self.is_held else "HOLD GRAPH", fg_color="orange" if self.is_held else "#5d6d7e")
 
     def get_ports(self):
         return [p.device for p in serial.tools.list_ports.comports()] or ["No Ports Found"]
@@ -130,43 +171,42 @@ class PowerMeterApp(ctk.CTk):
 
     def process_data(self, v_str, i_str, p_str):
         try:
-            # 1. Digital Readout (Always Updates)
-            v, i, p = max(0.0, float(v_str)), max(0.0, float(i_str)), max(0.0, float(p_str))
-            self.val_v.configure(text=f"{v:.2f} V")
-            self.val_i.configure(text=f"{i:.2f} A")
-            self.val_p.configure(text=f"{p:.1f} W")
+            v, i, p = float(v_str), float(i_str), float(p_str)
+            self.update_slots(self.v_slots, f"{v:05.2f}")
+            self.update_slots(self.i_slots, f"{i:05.2f}")
+            self.update_slots(self.p_slots, f"{p:05.1f}")
 
-            # 2. Skip Graph Logic if "Hold" is Active
-            if self.is_held:
-                return
+            if i > self.max_current:
+                self.max_current = i
+                self.update_slots(self.max_slots, f"{self.max_current:05.2f}")
 
-            # 3. Update History
+            if self.is_held: return
+            
             self.history_v.append(v)
             self.history_i.append(i)
             self.history_p.append(p)
 
-            # 4. Update Lines
+            # Update line visibility and data
             self.line_v.set_visible(self.show_v.get())
             self.line_i.set_visible(self.show_i.get())
             self.line_p.set_visible(self.show_p.get())
+            
+            if self.show_v.get(): self.line_v.set_ydata(list(self.history_v))
+            if self.show_i.get(): self.line_i.set_ydata(list(self.history_i))
+            if self.show_p.get(): self.line_p.set_ydata(list(self.history_p))
 
-            if self.show_v.get(): self.line_v.set_ydata(self.history_v)
-            if self.show_i.get(): self.line_i.set_ydata(self.history_i)
-            if self.show_p.get(): self.line_p.set_ydata(self.history_p)
-
-            # 5. FIXED SCALING: Find Max visible value
+            # --- AUTO SCALING LOGIC ---
+            self.ax.relim()
             visible_data = []
             if self.show_v.get(): visible_data.extend(list(self.history_v))
             if self.show_i.get(): visible_data.extend(list(self.history_i))
             if self.show_p.get(): visible_data.extend(list(self.history_p))
             
-            self.ax.relim()
             if visible_data and max(visible_data) > 0:
-                ymax = max(visible_data)
-                self.ax.set_ylim(0, ymax * 1.1) # Bottom locked at 0, Top padded 10%
+                self.ax.set_ylim(0, max(visible_data) * 1.1)
             else:
-                self.ax.set_ylim(0, 0.1) # Default tiny range if 0
-                
+                self.ax.set_ylim(0, 10) # Fallback scale
+
             self.canvas.draw_idle()
         except: pass
 
