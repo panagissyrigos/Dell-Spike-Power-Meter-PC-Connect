@@ -234,6 +234,7 @@ class PowerMeterApp(ctk.CTk):
         return labels
 
     def update_slots(self, slots_list, value_str):
+        value_str = str(value_str).lstrip('-')
         for i, char in enumerate(value_str):
             if i < len(slots_list):
                 slots_list[i].configure(text=char)
