@@ -41,46 +41,48 @@ An advanced digital telemetry system for the [Dell/Alienware Laptop Power Meter 
 
 Create a `platformio.ini` with the following configuration:
 
-```ini
+````ini
 [env:esp32-c3-devkitm-1]
 platform = espressif32
 board = esp32-c3-devkitm-1
 framework = arduino
 monitor_speed = 115200
 lib_deps = robtillaart/INA226 @ ^0.6.0
-
+```
 Flash the provided .cpp firmware to your ESP32-C3 via USB-C.
 ## 2. Python Dashboard Setup
 Ensure you have Python 3.9+ installed, then:
 
+```bash
 # Clone the repository
 git clone https://github.com
 cd dell-power-digitizer
 # Install dependencies
 pip install -r requirements.txt
+````
 
 ## 3. Running the App
+
 Ensure the digital-7.ttf font file is in the project root, then run:
 
-python main.py
+```bash
+python dpm_ui.py
+```
 
+1.  Select the COM Port for your device.
+2.  Click Connect.
+3.  Use the toggle switches to view live plots for Voltage, Current, or Power.
 
-   1. Select the COM Port for your device.
-   2. Click Connect.
-   3. Use the toggle switches to view live plots for Voltage, Current, or Power.
+---
 
-------------------------------
 ## 📊 Data Protocol
+
 The ESP32 sends a comma-separated string every 250ms via Serial:
 Voltage,Current_A,Power_W,Shunt_mV
-------------------------------
+
+---
+
 ## 🤝 Credits
 
-* Original Case Design: [Thingiverse #7031863](https://www.thingiverse.com/thing:7031863)
-* Firmware & Software: [Your Name/GitHub Handle]
-
-
-
-
-
-```
+- Original Case Design: [Thingiverse #7031863](https://www.thingiverse.com/thing:7031863)
+- Firmware & Software: [Your Name/GitHub Handle]
