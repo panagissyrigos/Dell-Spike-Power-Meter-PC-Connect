@@ -16,9 +16,8 @@ An advanced digital telemetry system for the [Dell/Alienware Laptop Power Meter 
 
 ### Components
 
-- **Microcontroller:** ESP32-C3
-- **Sensor:** INA226 High-Side Current Sensor
-- **Shunt:** R002 (0.002 Ohm)
+- **Microcontroller:** [ESP32-C3](https://amzn.to/4cqRlRE)
+- **Sensor/Shunt:** [INA226 High-Side Current Sensor with R002 (0.002 Ohm)](https://amzn.to/4tzMGDz)
 - **Enclosure:** [3D Printed Case via Thingiverse](https://www.thingiverse.com/thing:7031863)
 
 ### Wiring (ESP32-C3)
@@ -53,21 +52,23 @@ Flash the provided .cpp firmware to your ESP32-C3 via USB-C.
 
 Ensure you have Python 3.9+ installed, then:
 
-# Clone the repository
+## Clone the repository
 
 git clone https://github.com
-cd dell-power-digitizer
+cd Dell-Power-Meter-PC-Connect
 
-# Install dependencies
+## Install dependencies
 
+```
 pip install -r requirements.txt
+```
 
-## 3. Running the App
+### 3. Running the App
 
 Ensure the digital-7.ttf font file is in the project root, then run:
 
 ```
-python main.py
+python dpm_ui.py
 ```
 
 1.  Select the COM Port for your device.
@@ -86,8 +87,4 @@ Voltage,Current_A,Power_W,Shunt_mV
 ## 🤝 Credits
 
 - Original Case Design: [Thingiverse #7031863](https://www.thingiverse.com/thing:7031863)
-- Firmware & Software: [Your Name/GitHub Handle]
-
-Once you paste that in, your GitHub page will show clean **code boxes** and **tables** automatically.
-
-Do you want me to write a **one-sentence description** for your GitHub repository settings too?
+- Firmware & Software: [Nathan Morgan (Parts-People.com)]
