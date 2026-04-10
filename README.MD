@@ -1,6 +1,6 @@
 # 🔌 Dell Power Meter Digitizer (USB-C Pro Upgrade)
 
-An advanced digital telemetry system for the [Dell/Alienware Laptop Power Meter Box](https://www.thingiverse.com/thing:7031863). This project replaces standard analog readouts with an **ESP32-C3** and an **INA226** high-side sensor, streaming live power data over **USB-C** to a custom Python dashboard.
+This is the USB-C upgraded version of my Dell power meter. You can build this [Dell/Alienware Laptop Power Meter Box](https://www.thingiverse.com/thing:7031863) by printing following the build list. This project replaces standard analog readouts with an **ESP32-C3** and an **INA226** high-side sensor, streaming live power data over **USB-C** to a custom Python dashboard.
 
 ## ✨ Features
 
