@@ -49,6 +49,7 @@ framework = arduino
 monitor_speed = 115200
 lib_deps = robtillaart/INA226 @ ^0.6.0
 ```
+
 Flash the provided .cpp firmware to your ESP32-C3 via USB-C.
 ## 2. Python Dashboard Setup
 Ensure you have Python 3.9+ installed, then:
