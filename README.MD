@@ -24,7 +24,7 @@ This is the USB-C upgraded version of my Dell power meter. You can build this [D
 
 | INA226 Pin | ESP32-C3 Pin |
 | :--------- | :----------- |
-| VCC        | 3.3V         |
+| VCC        | 5V           |
 | GND        | GND          |
 | SDA        | GPIO 8       |
 | SCL        | GPIO 9       |
